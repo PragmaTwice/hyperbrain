@@ -46,15 +46,13 @@ llvm::Expected<BFTokenizer::Result> BFTokenizer::Tokenize(const Input &input) {
       result.emplace_back(Token::Kind(c), filename, line, column, ctx);
 
       column++;
-    } else if (std::isspace(c)) {
-      if (c == '\n') {
-        line++;
-        column = 0;
-      } else {
-        column++;
-      }
+    } else if (c == '\n') {
+      line++;
+      column = 0;
     } else {
-      return llvm::createStringError("encountered invalid character");
+      // Note that all of characters are allowed and ignored,
+      // so make sure that the text encoding is ASCII or UTF-8.
+      column++;
     }
   }
 
