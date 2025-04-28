@@ -17,6 +17,7 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
@@ -27,32 +28,58 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include <system_error>
+
+llvm::cl::OptionCategory HBCLICat("hyperbrain-cli options");
+
+llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional,
+                                         llvm::cl::desc("<input file>"),
+                                         llvm::cl::Required,
+                                         llvm::cl::cat(HBCLICat));
+
+llvm::cl::opt<std::string>
+    OutputFilename("o", llvm::cl::desc("path for the output file"),
+                   llvm::cl::init("a.out"), llvm::cl::cat(HBCLICat));
+
+llvm::cl::opt<bool> OutputBF("b", llvm::cl::desc("compile to MLIR BF dialect"),
+                             llvm::cl::init(false), llvm::cl::cat(HBCLICat));
+
+llvm::cl::opt<bool>
+    OutputLLVMIR("r", llvm::cl::desc("compile to MLIR LLVMIR dialect"),
+                 llvm::cl::init(false), llvm::cl::cat(HBCLICat));
 
 int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    llvm::errs() << "usage: hyperbrain-cli <input-file>\n";
-    std::exit(1);
-  }
+  llvm::cl::HideUnrelatedOptions(HBCLICat);
+  llvm::cl::ParseCommandLineOptions(
+      argc, argv,
+      "HyperBrain CLI - High-performance BrainFuck compiler and runtime\n");
 
-  auto filename = argv[1];
-  auto input_res = hyperbrain::parser::Input::FromFile(filename);
+  auto input_res = hyperbrain::parser::Input::FromFile(InputFilename);
   if (!input_res) {
     llvm::errs() << "input error: " << input_res.takeError() << "\n";
-    std::exit(1);
+    return 1;
   }
-
   auto input = *input_res;
 
-  mlir::MLIRContext context;
-  context.loadDialect<hyperbrain::bf::BFDialect>();
+  std::error_code ec;
+  llvm::raw_fd_ostream os(OutputFilename, ec);
+  if (ec) {
+    llvm::errs() << "output error: " << ec.message() << "\n";
+    return 1;
+  }
 
+  mlir::OpPrintingFlags flags;
+  flags.enableDebugInfo();
+
+  mlir::MLIRContext context;
   hyperbrain::parser::BFTokenizer tokenizer(context);
 
   auto tokens_res = tokenizer.Tokenize(input);
   if (!tokens_res) {
     llvm::errs() << "tokenizer error: " << tokens_res.takeError() << "\n";
-    std::exit(1);
+    return 1;
   }
 
   auto tokens = *tokens_res;
@@ -61,12 +88,14 @@ int main(int argc, char *argv[]) {
   auto err = parser.Parse(tokens);
   if (err) {
     llvm::errs() << "parser error: " << err << "\n";
-    std::exit(1);
+    return 1;
   }
 
   auto module = parser.Module();
-  llvm::outs() << "==================== BF IR:\n";
-  module.dump();
+  if (OutputBF) {
+    module->print(os, flags);
+    return 0;
+  }
 
   mlir::PassManager manager(&context);
   manager.addPass(hyperbrain::conversion::createConvertBFToLLVMPass());
@@ -81,11 +110,13 @@ int main(int argc, char *argv[]) {
 
   if (manager.run(module).failed()) {
     llvm::errs() << "failed to run passes\n";
-    std::exit(1);
+    return 1;
   }
 
-  llvm::outs() << "==================== LLVM IR:\n";
-  module.dump();
+  if (OutputLLVMIR) {
+    module->print(os, flags);
+    return 0;
+  }
 
   mlir::registerLLVMDialectTranslation(context);
   mlir::registerBuiltinDialectTranslation(context);
@@ -111,6 +142,5 @@ int main(int argc, char *argv[]) {
       builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
   llvm_manager.run(*llvm_module, mam);
 
-  llvm::outs() << "==================== Optimized LLVM IR:\n";
-  llvm_module->dump();
+  llvm_module->print(os, nullptr);
 }

@@ -19,9 +19,6 @@ add_mlir_conversion_library(BFToLLVM
   DEPENDS
   BFOps
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRLLVMCommonConversion
   MLIRLLVMDialect

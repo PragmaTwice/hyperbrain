@@ -106,7 +106,9 @@ public:
 
   BFParser(mlir::MLIRContext &ctx)
       : module(mlir::ModuleOp::create(mlir::UnknownLoc::get(&ctx))),
-        builder(module.getBodyRegion()) {}
+        builder(module.getBodyRegion()) {
+    ctx.loadDialect<bf::BFDialect>();
+  }
 
   mlir::ModuleOp Module() { return module; }
 
