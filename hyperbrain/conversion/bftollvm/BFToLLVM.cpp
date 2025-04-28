@@ -149,7 +149,7 @@ struct ConvertBFMainOp : mlir::ConvertOpToLLVMPattern<bf::MainOp> {
   mlir::LogicalResult
   matchAndRewrite(bf::MainOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto name = "__hyperbrain_bf_main";
+    auto name = LLVMBFMainFuncName;
     auto ptr = mlir::LLVM::LLVMPointerType::get(getContext());
     auto type = mlir::LLVM::LLVMFunctionType::get(ptr, {ptr});
     auto func =
@@ -174,7 +174,7 @@ struct ConvertBFOutputOp : mlir::ConvertOpToLLVMPattern<bf::OutputOp> {
     auto i8 = mlir::IntegerType::get(getContext(), 8);
     auto type = mlir::LLVM::LLVMFunctionType::get(
         mlir::LLVM::LLVMVoidType::get(getContext()), {i8});
-    auto name = "__hyperbrain_bf_print";
+    auto name = LLVMBFPrintFuncName;
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     if (!module.lookupSymbol(name)) {
@@ -204,7 +204,7 @@ struct ConvertBFInputOp : mlir::ConvertOpToLLVMPattern<bf::InputOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto i8 = mlir::IntegerType::get(getContext(), 8);
     auto type = mlir::LLVM::LLVMFunctionType::get(i8, {});
-    auto name = "__hyperbrain_bf_accept";
+    auto name = LLVMBFAcceptFuncName;
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     if (!module.lookupSymbol(name)) {

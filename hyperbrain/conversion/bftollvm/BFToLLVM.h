@@ -20,6 +20,11 @@
 
 namespace hyperbrain::conversion {
 
+inline constexpr llvm::StringRef LLVMBFAcceptFuncName =
+    "__hyperbrain_bf_accept";
+inline constexpr llvm::StringRef LLVMBFPrintFuncName = "__hyperbrain_bf_print";
+inline constexpr llvm::StringRef LLVMBFMainFuncName = "__hyperbrain_bf_main";
+
 void populateBFToLLVMConversionPatterns(mlir::LLVMTypeConverter &typeConverter,
                                         mlir::RewritePatternSet &patterns);
 
