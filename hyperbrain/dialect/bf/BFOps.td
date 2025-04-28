@@ -20,7 +20,7 @@ include "mlir/IR/AttrTypeBase.td"
 
 def BF_Dialect : Dialect {
   let name = "bf";
-  let summary = "BrainFuck";
+  let summary = "BrainFuck IR";
   let cppNamespace = "::hyperbrain::bf";
 
   let useDefaultTypePrinterParser = 1;
@@ -28,6 +28,7 @@ def BF_Dialect : Dialect {
 
 def BF_Ptr : TypeDef<BF_Dialect, "Ptr"> {
   let mnemonic = "ptr";
+  let summary = "pointer type in BF dialect";
 }
 
 class BF_Op<string mnemonic, list<Trait> traits = []> :
