@@ -12,12 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-add_executable(hyperbrain-cli
-    HyperBrainCLI.cpp
-)
+add_mlir_library(BFLLVMTarget
+    LLVMTarget.h
+    LLVMTarget.cpp
 
-target_link_libraries(hyperbrain-cli PUBLIC
-    BFParser
-    BFToLLVM
-    BFLLVMTarget
+    LINK_LIBS PUBLIC
+    MLIRIR
+    MLIRTargetLLVMIRExport
+    MLIRLLVMToLLVMIRTranslation
+    MLIRBuiltinToLLVMIRTranslation
 )

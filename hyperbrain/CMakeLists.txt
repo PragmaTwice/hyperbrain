@@ -15,4 +15,5 @@
 add_subdirectory(dialect)
 add_subdirectory(conversion)
 add_subdirectory(parser)
+add_subdirectory(target)
 add_subdirectory(tools)

@@ -26,4 +26,6 @@ add_mlir_conversion_library(BFToLLVM
   MLIRIR
   MLIRPass
   MLIRSupport
+  MLIRSCFToControlFlow
+  MLIRControlFlowToLLVM
 )

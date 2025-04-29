@@ -15,20 +15,23 @@
 #include "hyperbrain/conversion/bftollvm/BFToLLVM.h"
 
 #include "hyperbrain/dialect/bf/BFOps.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
 
 namespace hyperbrain::conversion {
 
@@ -269,6 +272,18 @@ void populateBFToLLVMConversionPatterns(mlir::LLVMTypeConverter &typeConverter,
                ConvertBFIncOp, ConvertBFDecOp, ConvertBFYieldOp,
                ConvertBFWhileOp, ConvertBFInputOp, ConvertBFOutputOp>(
       typeConverter);
+}
+
+void populateBFToLLVMPasses(mlir::PassManager &pm) {
+  pm.addPass(createConvertBFToLLVMPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+  pm.addPass(mlir::createSymbolDCEPass());
+  pm.addPass(mlir::createConvertSCFToCFPass());
+  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+  pm.addPass(mlir::createSymbolDCEPass());
 }
 
 } // namespace hyperbrain::conversion

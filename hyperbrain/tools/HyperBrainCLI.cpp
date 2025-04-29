@@ -14,20 +14,11 @@
 
 #include "hyperbrain/conversion/bftollvm/BFToLLVM.h"
 #include "hyperbrain/parser/BFParser.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "hyperbrain/target/LLVMTarget.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/PassRegistry.h"
-#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Export.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Passes/OptimizationLevel.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
@@ -98,15 +89,7 @@ int main(int argc, char *argv[]) {
   }
 
   mlir::PassManager manager(&context);
-  manager.addPass(hyperbrain::conversion::createConvertBFToLLVMPass());
-  manager.addPass(mlir::createCanonicalizerPass());
-  manager.addPass(mlir::createCSEPass());
-  manager.addPass(mlir::createSymbolDCEPass());
-  manager.addPass(mlir::createConvertSCFToCFPass());
-  manager.addPass(mlir::createConvertControlFlowToLLVMPass());
-  manager.addPass(mlir::createCanonicalizerPass());
-  manager.addPass(mlir::createCSEPass());
-  manager.addPass(mlir::createSymbolDCEPass());
+  hyperbrain::conversion::populateBFToLLVMPasses(manager);
 
   if (manager.run(module).failed()) {
     llvm::errs() << "failed to run passes\n";
@@ -118,29 +101,10 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  mlir::registerLLVMDialectTranslation(context);
-  mlir::registerBuiltinDialectTranslation(context);
-
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module =
-      mlir::translateModuleToLLVMIR(module.getOperation(), llvm_context);
-
-  llvm::PassBuilder builder;
-
-  llvm::LoopAnalysisManager lam;
-  llvm::FunctionAnalysisManager fam;
-  llvm::CGSCCAnalysisManager cgam;
-  llvm::ModuleAnalysisManager mam;
-
-  builder.registerModuleAnalyses(mam);
-  builder.registerCGSCCAnalyses(cgam);
-  builder.registerFunctionAnalyses(fam);
-  builder.registerLoopAnalyses(lam);
-  builder.crossRegisterProxies(lam, fam, cgam, mam);
-
-  auto llvm_manager =
-      builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
-  llvm_manager.run(*llvm_module, mam);
+      hyperbrain::target::translateToLLVM(module, llvm_context);
+  hyperbrain::target::optimizeLLVMModule(*llvm_module);
 
   llvm_module->print(os, nullptr);
 }
