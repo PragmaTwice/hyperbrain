@@ -20,6 +20,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "hyperbrain/dialect/bf/BFOpsDialect.h.inc"

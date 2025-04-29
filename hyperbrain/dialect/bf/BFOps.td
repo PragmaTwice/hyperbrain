@@ -17,6 +17,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def BF_Dialect : Dialect {
   let name = "bf";
@@ -36,7 +37,7 @@ class BF_Op<string mnemonic, list<Trait> traits = []> :
   let extraClassDeclaration = "";
 }
 
-def BF_NextOp : BF_Op<"next"> {
+def BF_NextOp : BF_Op<"next", [Pure]> {
   let summary = "increase the pointer to point to the next byte";
 
   let arguments = (ins
@@ -52,7 +53,7 @@ def BF_NextOp : BF_Op<"next"> {
   }];
 }
 
-def BF_PrevOp : BF_Op<"prev"> {
+def BF_PrevOp : BF_Op<"prev", [Pure]> {
   let summary = "decrease the pointer to point to the previous byte";
 
   let arguments = (ins
