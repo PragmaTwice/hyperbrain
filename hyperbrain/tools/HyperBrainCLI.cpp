@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module =
-      hyperbrain::target::translateToLLVM(module, llvm_context);
+      hyperbrain::target::translateToLLVM(module, llvm_context, InputFilename);
   hyperbrain::target::populateRuntimeFuncs(*llvm_module, MemorySize);
   hyperbrain::target::optimizeLLVMModule(*llvm_module);
 

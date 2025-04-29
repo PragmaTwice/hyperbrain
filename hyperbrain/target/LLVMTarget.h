@@ -20,7 +20,8 @@
 namespace hyperbrain::target {
 
 std::unique_ptr<llvm::Module> translateToLLVM(mlir::ModuleOp module,
-                                              llvm::LLVMContext &ctx);
+                                              llvm::LLVMContext &ctx,
+                                              llvm::StringRef name);
 
 void optimizeLLVMModule(llvm::Module &module);
 

@@ -28,11 +28,12 @@
 namespace hyperbrain::target {
 
 std::unique_ptr<llvm::Module> translateToLLVM(mlir::ModuleOp module,
-                                              llvm::LLVMContext &ctx) {
+                                              llvm::LLVMContext &ctx,
+                                              llvm::StringRef name) {
   mlir::registerLLVMDialectTranslation(*module->getContext());
   mlir::registerBuiltinDialectTranslation(*module.getContext());
 
-  return mlir::translateModuleToLLVMIR(module.getOperation(), ctx);
+  return mlir::translateModuleToLLVMIR(module.getOperation(), ctx, name);
 }
 
 void optimizeLLVMModule(llvm::Module &module) {
