@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Alignment.h"
 
 namespace hyperbrain::target {
 
@@ -106,6 +107,35 @@ void populateBFPrintFunc(llvm::Module &module) {
 
   llvm::verifyFunction(*func);
 }
-void populateMainFunc(llvm::Module &module, size_t memory_size) {}
+
+void populateMainFunc(llvm::Module &module, size_t memory_size) {
+  auto &ctx = module.getContext();
+  llvm::IRBuilder<> builder(ctx);
+
+  auto *malloc_type = llvm::FunctionType::get(builder.getPtrTy(),
+                                              {builder.getInt64Ty()}, false);
+  auto malloc = module.getOrInsertFunction("malloc", malloc_type);
+
+  auto *bfmain_type =
+      llvm::FunctionType::get(builder.getPtrTy(), {builder.getPtrTy()}, false);
+  auto bfmain =
+      module.getOrInsertFunction(conversion::LLVMBFMainFuncName, bfmain_type);
+
+  auto *type = llvm::FunctionType::get(builder.getInt32Ty(), {}, false);
+
+  auto *func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                      "main", module);
+
+  auto *entry = llvm::BasicBlock::Create(ctx, "entry", func);
+  builder.SetInsertPoint(entry);
+
+  auto size = builder.getInt64(memory_size);
+  auto *ptr = builder.CreateCall(malloc, {size});
+  builder.CreateMemSetInline(ptr, llvm::MaybeAlign(), builder.getInt8(0), size);
+  builder.CreateCall(bfmain, {ptr});
+  builder.CreateRet(builder.getInt32(0));
+
+  llvm::verifyFunction(*func);
+}
 
 } // namespace hyperbrain::target

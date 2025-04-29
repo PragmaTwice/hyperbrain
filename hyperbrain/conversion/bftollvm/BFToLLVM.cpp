@@ -157,6 +157,7 @@ struct ConvertBFMainOp : mlir::ConvertOpToLLVMPattern<bf::MainOp> {
     auto type = mlir::LLVM::LLVMFunctionType::get(ptr, {ptr});
     auto func =
         rewriter.create<mlir::LLVM::LLVMFuncOp>(op->getLoc(), name, type);
+    func.setAlwaysInline(true);
 
     func.getRegion().takeBody(adaptor.getComp());
     if (failed(rewriter.convertRegionTypes(&func.getRegion(),
