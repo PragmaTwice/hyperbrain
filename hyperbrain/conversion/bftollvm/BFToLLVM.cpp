@@ -274,16 +274,18 @@ void populateBFToLLVMConversionPatterns(mlir::LLVMTypeConverter &typeConverter,
       typeConverter);
 }
 
+void populateCleanPasses(mlir::PassManager &pm) {
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+  pm.addPass(mlir::createSymbolDCEPass());
+}
+
 void populateBFToLLVMPasses(mlir::PassManager &pm) {
   pm.addPass(createConvertBFToLLVMPass());
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createCSEPass());
-  pm.addPass(mlir::createSymbolDCEPass());
+  populateCleanPasses(pm);
   pm.addPass(mlir::createConvertSCFToCFPass());
   pm.addPass(mlir::createConvertControlFlowToLLVMPass());
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createCSEPass());
-  pm.addPass(mlir::createSymbolDCEPass());
+  populateCleanPasses(pm);
 }
 
 } // namespace hyperbrain::conversion

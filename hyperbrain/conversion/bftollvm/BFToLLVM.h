@@ -30,6 +30,7 @@ void populateBFToLLVMConversionPatterns(mlir::LLVMTypeConverter &typeConverter,
 
 std::unique_ptr<mlir::Pass> createConvertBFToLLVMPass();
 
+void populateCleanPasses(mlir::PassManager &pm);
 void populateBFToLLVMPasses(mlir::PassManager &pm);
 
 } // namespace hyperbrain::conversion
