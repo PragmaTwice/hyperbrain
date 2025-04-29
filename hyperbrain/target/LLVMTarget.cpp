@@ -17,9 +17,13 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace hyperbrain::target {
 
@@ -112,10 +116,6 @@ void populateMainFunc(llvm::Module &module, size_t memory_size) {
   auto &ctx = module.getContext();
   llvm::IRBuilder<> builder(ctx);
 
-  auto *malloc_type = llvm::FunctionType::get(builder.getPtrTy(),
-                                              {builder.getInt64Ty()}, false);
-  auto malloc = module.getOrInsertFunction("malloc", malloc_type);
-
   auto *bfmain_type =
       llvm::FunctionType::get(builder.getPtrTy(), {builder.getPtrTy()}, false);
   auto bfmain =
@@ -130,12 +130,49 @@ void populateMainFunc(llvm::Module &module, size_t memory_size) {
   builder.SetInsertPoint(entry);
 
   auto size = builder.getInt64(memory_size);
-  auto *ptr = builder.CreateCall(malloc, {size});
+  auto *ptr = builder.CreateAlloca(builder.getInt8Ty(), size);
   builder.CreateMemSetInline(ptr, llvm::MaybeAlign(), builder.getInt8(0), size);
   builder.CreateCall(bfmain, {ptr});
   builder.CreateRet(builder.getInt32(0));
 
   llvm::verifyFunction(*func);
+}
+
+llvm::Error emitObjectFile(llvm::Module &module, llvm::raw_pwrite_stream &os) {
+  using namespace llvm;
+
+  std::string target_triple = sys::getDefaultTargetTriple();
+  module.setTargetTriple(target_triple);
+
+  std::string error;
+  const Target *target = TargetRegistry::lookupTarget(target_triple, error);
+  if (!target) {
+    return make_error<StringError>("failed to lookup target: " + error,
+                                   inconvertibleErrorCode());
+  }
+
+  TargetOptions opt;
+  auto rm = std::optional<Reloc::Model>();
+  std::unique_ptr<TargetMachine> target_machine(
+      target->createTargetMachine(target_triple, "generic", "", opt, rm));
+  if (!target_machine) {
+    return make_error<StringError>("failed to create target machine",
+                                   inconvertibleErrorCode());
+  }
+
+  module.setDataLayout(target_machine->createDataLayout());
+
+  legacy::PassManager pass;
+  if (target_machine->addPassesToEmitFile(pass, os, nullptr,
+                                          CodeGenFileType::ObjectFile)) {
+    return make_error<StringError>("failed to emit object file",
+                                   inconvertibleErrorCode());
+  }
+
+  pass.run(module);
+  os.flush();
+
+  return Error::success();
 }
 
 } // namespace hyperbrain::target

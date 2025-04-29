@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace hyperbrain::target {
 
@@ -28,5 +29,7 @@ void populateBFAcceptFunc(llvm::Module &module);
 void populateBFPrintFunc(llvm::Module &module);
 
 void populateRuntimeFuncs(llvm::Module &module, size_t memory_size);
+
+llvm::Error emitObjectFile(llvm::Module &module, llvm::raw_pwrite_stream &os);
 
 } // namespace hyperbrain::target

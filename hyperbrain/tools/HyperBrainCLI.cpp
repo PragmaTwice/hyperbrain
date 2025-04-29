@@ -20,6 +20,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
@@ -40,6 +41,9 @@ llvm::cl::opt<bool> OutputBF("b", llvm::cl::desc("compile to MLIR BF dialect"),
 llvm::cl::opt<bool>
     OutputLLVMIR("r", llvm::cl::desc("compile to MLIR LLVMIR dialect"),
                  llvm::cl::init(false), llvm::cl::cat(HBCLICat));
+
+llvm::cl::opt<bool> OutputLLVM("l", llvm::cl::desc("compile to LLVM IR"),
+                               llvm::cl::init(false), llvm::cl::cat(HBCLICat));
 
 llvm::cl::opt<size_t>
     MemorySize("m", llvm::cl::desc("memory size for the program to allocate"),
@@ -111,5 +115,18 @@ int main(int argc, char *argv[]) {
   hyperbrain::target::populateRuntimeFuncs(*llvm_module, MemorySize);
   hyperbrain::target::optimizeLLVMModule(*llvm_module);
 
-  llvm_module->print(os, nullptr);
+  if (OutputLLVM) {
+    llvm_module->print(os, nullptr);
+    return 0;
+  }
+
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmPrinters();
+
+  if (auto err = hyperbrain::target::emitObjectFile(*llvm_module, os)) {
+    llvm::errs() << "failed to emit object file: " << err << "\n";
+    return 1;
+  }
 }
