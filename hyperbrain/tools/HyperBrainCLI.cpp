@@ -41,6 +41,10 @@ llvm::cl::opt<bool>
     OutputLLVMIR("r", llvm::cl::desc("compile to MLIR LLVMIR dialect"),
                  llvm::cl::init(false), llvm::cl::cat(HBCLICat));
 
+llvm::cl::opt<size_t>
+    MemorySize("m", llvm::cl::desc("memory size for the program to allocate"),
+               llvm::cl::init(1024), llvm::cl::cat(HBCLICat));
+
 int main(int argc, char *argv[]) {
   llvm::cl::HideUnrelatedOptions(HBCLICat);
   llvm::cl::ParseCommandLineOptions(
@@ -104,6 +108,7 @@ int main(int argc, char *argv[]) {
   llvm::LLVMContext llvm_context;
   std::unique_ptr<llvm::Module> llvm_module =
       hyperbrain::target::translateToLLVM(module, llvm_context);
+  hyperbrain::target::populateRuntimeFuncs(*llvm_module, MemorySize);
   hyperbrain::target::optimizeLLVMModule(*llvm_module);
 
   llvm_module->print(os, nullptr);

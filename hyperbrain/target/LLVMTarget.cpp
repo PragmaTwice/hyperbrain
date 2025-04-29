@@ -13,9 +13,11 @@
 // limitations under the License.
 
 #include "hyperbrain/target/LLVMTarget.h"
+#include "hyperbrain/conversion/bftollvm/BFToLLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
 
 namespace hyperbrain::target {
@@ -46,5 +48,64 @@ void optimizeLLVMModule(llvm::Module &module) {
       builder.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
   llvm_manager.run(module, mam);
 }
+
+void populateRuntimeFuncs(llvm::Module &module, size_t memory_size) {
+  populateBFAcceptFunc(module);
+  populateBFPrintFunc(module);
+  populateMainFunc(module, memory_size);
+}
+
+void populateBFAcceptFunc(llvm::Module &module) {
+  auto &ctx = module.getContext();
+  llvm::IRBuilder<> builder(ctx);
+
+  auto *getchar_type = llvm::FunctionType::get(builder.getInt32Ty(), false);
+  auto getchar = module.getOrInsertFunction("getchar", getchar_type);
+
+  auto *type = llvm::FunctionType::get(builder.getInt8Ty(), {}, false);
+
+  auto *func = module.getFunction(conversion::LLVMBFAcceptFuncName);
+  if (!func) {
+    func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                  conversion::LLVMBFAcceptFuncName, module);
+  }
+
+  auto *entry = llvm::BasicBlock::Create(ctx, "entry", func);
+  builder.SetInsertPoint(entry);
+
+  auto *call = builder.CreateCall(getchar);
+  auto *trunc = builder.CreateTrunc(call, builder.getInt8Ty());
+  builder.CreateRet(trunc);
+
+  llvm::verifyFunction(*func);
+}
+
+void populateBFPrintFunc(llvm::Module &module) {
+  auto &ctx = module.getContext();
+  llvm::IRBuilder<> builder(ctx);
+
+  auto *putchar_type = llvm::FunctionType::get(builder.getInt32Ty(),
+                                               {builder.getInt32Ty()}, false);
+  auto putchar = module.getOrInsertFunction("putchar", putchar_type);
+
+  auto *type = llvm::FunctionType::get(builder.getVoidTy(),
+                                       {builder.getInt8Ty()}, false);
+
+  auto *func = module.getFunction(conversion::LLVMBFPrintFuncName);
+  if (!func) {
+    func = llvm::Function::Create(type, llvm::Function::ExternalLinkage,
+                                  conversion::LLVMBFPrintFuncName, module);
+  }
+
+  auto *entry = llvm::BasicBlock::Create(ctx, "entry", func);
+  builder.SetInsertPoint(entry);
+
+  auto *sext = builder.CreateSExt(func->getArg(0), builder.getInt32Ty());
+  builder.CreateCall(putchar, {sext});
+  builder.CreateRetVoid();
+
+  llvm::verifyFunction(*func);
+}
+void populateMainFunc(llvm::Module &module, size_t memory_size) {}
 
 } // namespace hyperbrain::target

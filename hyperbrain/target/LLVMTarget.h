@@ -23,4 +23,10 @@ std::unique_ptr<llvm::Module> translateToLLVM(mlir::ModuleOp module,
 
 void optimizeLLVMModule(llvm::Module &module);
 
+void populateMainFunc(llvm::Module &module, size_t memory_size);
+void populateBFAcceptFunc(llvm::Module &module);
+void populateBFPrintFunc(llvm::Module &module);
+
+void populateRuntimeFuncs(llvm::Module &module, size_t memory_size);
+
 } // namespace hyperbrain::target
